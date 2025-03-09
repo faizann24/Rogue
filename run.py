@@ -49,10 +49,39 @@ Examples:
                         default=False,
                         help='Perform subdomain enumeration')
 
+    model_help_text = """LLM model to use (default: o3-mini)
+
+OpenAI Models:
+- o3-mini: Fast, cost-effective model for general tasks
+- o1-preview: Advanced reasoning capabilities
+- gpt-4o: Latest GPT-4 model with vision capabilities
+
+Anthropic Claude Models:
+- claude-3-7-sonnet-20250219: Latest flagship model with hybrid reasoning
+- claude-3-7-sonnet-latest: Latest 3.7 Sonnet version (alias to 20250219)
+- claude-3-5-sonnet-20241022: Balanced performance and capabilities
+- claude-3-5-haiku-20241022: Fast, efficient model for simpler tasks
+
+Note: As of March 2025, specific version IDs (e.g., 20250219) are recommended for production use."""
+
     parser.add_argument('-m', '--model',
-                        choices=['o3-mini', 'o1-preview'],
+                        choices=[
+                            # OpenAI models
+                            'o3-mini', 'o1-preview', 'gpt-4o',
+                            
+                            # Latest Claude models
+                            'claude-3-7-sonnet-20250219',
+                            'claude-3-7-sonnet-latest',
+                            'claude-3-5-sonnet-20241022',
+                            'claude-3-5-haiku-20241022'
+                        ],
                         default='o3-mini',
-                        help='LLM model to use (default: o3-mini)')
+                        help=model_help_text)
+    
+    parser.add_argument('-p', '--provider',
+                        choices=['openai', 'anthropic', 'auto'],
+                        default='auto',
+                        help='LLM provider to use (default: auto - determines provider from model name)')
     
     parser.add_argument('-o', '--output',
                         default='security_results',
@@ -62,6 +91,11 @@ Examples:
                         type=int,
                         default=10,
                         help='Maximum iterations per plan of attack (default: 10)')
+    
+    parser.add_argument('-d', '--debug',
+                        action='store_true',
+                        default=False,
+                        help='Enable debug output for troubleshooting')
 
     args = parser.parse_args()
     
@@ -73,9 +107,17 @@ Examples:
 if __name__ == "__main__":
     print_banner()
     args = parse_args()
+    # Determine provider if set to auto
+    provider = args.provider
+    if provider == 'auto':
+        if args.model.startswith('claude'):
+            provider = 'anthropic'
+        else:
+            provider = 'openai'
+    
     print("\n[*] Starting security scan...")
     print(f"[*] Target URL: {args.url}")
-    print(f"[*] Using model: {args.model}")
+    print(f"[*] Using model: {args.model} (Provider: {provider})")
     print(f"[*] Results will be saved to: {args.output}\n")
     
     agent = Agent(
@@ -83,7 +125,9 @@ if __name__ == "__main__":
         expand_scope=args.expand,
         enumerate_subdomains=args.subdomains,
         model=args.model,
+        provider=provider,
         output_dir=args.output,
-        max_iterations=args.max_iterations
+        max_iterations=args.max_iterations,
+        debug=args.debug
     )
     agent.run()

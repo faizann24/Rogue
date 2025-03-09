@@ -10,14 +10,18 @@ class Reporter:
     to validate discovered vulnerabilities and generate detailed reports.
     """
 
-    def __init__(self, starting_url):
+    def __init__(self, starting_url, model_provider: str = "openai", model_name: str = None, debug: bool = False):
         """
         Initialize the reporter.
 
         Args:
             starting_url: Base URL that was tested
+            model_provider: Provider to use ("openai" or "anthropic")
+            model_name: Specific model to use (defaults to provider's recommended model)
+            debug: Whether to enable debug output
         """
-        self.llm = LLM()
+        self.debug = debug
+        self.llm = LLM(model_provider=model_provider, model_name=model_name, debug=debug)
         self.reports = []
         self.starting_url = starting_url
         self.filename = str(self.starting_url).replace("https://", "").replace("http://", "").replace("/", "_")
@@ -118,31 +122,75 @@ class Reporter:
             report_path = Path("security_results") / f"{self.filename}.txt"
             with open(report_path, "r") as f:
                 report_content = f.read()
+                
+            # Check if there are actual reports to summarize
+            if report_content.strip():
+                system_prompt = f"""
+                You are a security report summarizer. Your task is to analyze the security findings and create a comprehensive markdown summary report.
+
+                For each vulnerability found:
+                1. Provide a clear description of the vulnerability and its severity
+                2. Detail the affected endpoint/component
+                3. Include the exact payload/steps that were used to exploit it
+                4. Document the proof/evidence that confirmed successful exploitation
+                5. Explain potential impact and recommendations
+
+                Format the output as a proper markdown document with:
+                - Executive summary at the top
+                - Table of contents
+                - Detailed findings in separate sections
+                - Technical details in code blocks
+                - Clear headings and structure
+                
+                Focus on proven vulnerabilities with concrete evidence. Exclude theoretical or unproven issues.
+                """
+
+                system_prompt = [{"role": "system", "content": system_prompt}]
+                summary = self.llm.reason(system_prompt + [{"role": "user", "content": report_content}])
+            else:
+                # No vulnerabilities were found, create a clean "no findings" report
+                summary = self._generate_no_findings_report()
         except FileNotFoundError:
-            report_content = "No vulns were reported."
-
-        system_prompt = f"""
-        You are a security report summarizer. Your task is to analyze the security findings and create a comprehensive markdown summary report.
-
-        For each vulnerability found:
-        1. Provide a clear description of the vulnerability and its severity
-        2. Detail the affected endpoint/component
-        3. Include the exact payload/steps that were used to exploit it
-        4. Document the proof/evidence that confirmed successful exploitation
-        5. Explain potential impact and recommendations
-
-        Format the output as a proper markdown document with:
-        - Executive summary at the top
-        - Table of contents
-        - Detailed findings in separate sections
-        - Technical details in code blocks
-        - Clear headings and structure
-        
-        Focus on proven vulnerabilities with concrete evidence. Exclude theoretical or unproven issues.
-        """
-
-        system_prompt = [{"role": "system", "content": system_prompt}]
-        summary = self.llm.reason(system_prompt + [{"role": "user", "content": report_content}])
+            # No report file exists, create a clean "no findings" report
+            summary = self._generate_no_findings_report()
+            
         # Save markdown summary report
         with open(f"security_results/{self.filename}_summary.md", "w") as f:
             f.write(summary)
+            
+    def _generate_no_findings_report(self):
+        """Generate a standardized report for when no vulnerabilities were found."""
+        return f"""# Security Assessment Summary: {self.starting_url}
+
+## Executive Summary
+
+A comprehensive security assessment was conducted on **{self.starting_url}** using automated scanning techniques and manual testing. No exploitable vulnerabilities were identified during this assessment.
+
+## Assessment Details
+
+- **Target:** {self.starting_url}
+- **Assessment Date:** Auto-generated report
+- **Assessment Type:** Web application security testing
+- **Testing Methodology:** Combination of automated scanning and manual testing
+
+## Findings Summary
+
+No security vulnerabilities were identified during this assessment. This indicates that the application has successfully implemented security controls to protect against common web application vulnerabilities.
+
+## Recommendations
+
+While no vulnerabilities were found during this assessment, security is an ongoing process. We recommend:
+
+1. **Regular Security Testing:** Continue to perform regular security assessments
+2. **Security Monitoring:** Implement or maintain security monitoring systems
+3. **Keep Dependencies Updated:** Regularly update all software dependencies
+4. **Security Training:** Ensure development team stays current on security best practices
+
+## Conclusion
+
+Based on the assessment performed, no exploitable security vulnerabilities were identified in the target application. However, this does not guarantee that the application is completely secure, as new vulnerabilities and attack techniques emerge regularly.
+
+---
+
+*This report was automatically generated by Rogue Security Scanner*
+"""

@@ -1,0 +1,10 @@
+# Cline memory-bank
+memory-bank/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Backup files
+*.py.backup
+

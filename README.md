@@ -18,7 +18,7 @@ Note: This is a very early release with many planned improvements and features s
 
 ## 🌟 Key Features
 
-- **Intelligent Vulnerability Discovery**: Uses LLMs to understand application context and identify potential security weaknesses
+- **Intelligent Vulnerability Discovery**: Uses LLMs (OpenAI and Anthropic Claude) to understand application context and identify potential security weaknesses
 - **Advanced Payload Generation**: Creates sophisticated test payloads tailored to the target application
 - **Context-Aware Testing**: Analyzes application behavior and responses to guide testing strategy
 - **Automated Exploit Verification**: Validates findings to eliminate false positives
@@ -32,7 +32,8 @@ Note: This is a very early release with many planned improvements and features s
 ### Prerequisites
 
 - Python 3.8+
-- OpenAI API key
+- OpenAI API key (for using OpenAI models)
+- Anthropic API key (optional, for using Claude models)
 - Playwright
 
 ### Installation
@@ -46,7 +47,10 @@ cd rogue
 pip install -r requirements.txt
 
 # Set up your OpenAI API key
-export OPENAI_API_KEY='your-api-key-here'
+export OPENAI_API_KEY='your-openai-key-here'
+
+# For Anthropic Claude models (optional)
+export ANTHROPIC_API_KEY='your-anthropic-key-here'
 ```
 
 ### Basic Usage
@@ -55,8 +59,17 @@ export OPENAI_API_KEY='your-api-key-here'
 # Basic scan of a single URL
 python run.py -u https://example.com
 
-# Advanced scan with subdomain enumeration and URL discovery
+# Advanced scan with subdomain enumeration and URL discovery (OpenAI)
 python run.py -u https://example.com -e -s -m o3-mini -i 10
+
+# Using Anthropic Claude models
+python run.py -u https://example.com -p anthropic -m claude-3-7-sonnet-20250219
+
+# Using Anthropic Claude with extended thinking capabilities
+python run.py -u https://example.com -p anthropic -m claude-3-7-sonnet-latest -e -s
+
+# Using faster Anthropic Claude model
+python run.py -u https://example.com -p anthropic -m claude-3-5-haiku-20241022
 ```
 
 ## 🛠️ Command Line Options
@@ -66,7 +79,8 @@ python run.py -u https://example.com -e -s -m o3-mini -i 10
 | `-u, --url` | Target URL to test (required) |
 | `-e, --expand` | Expand testing to discovered URLs |
 | `-s, --subdomains` | Perform subdomain enumeration |
-| `-m, --model` | LLM model to use (o3-mini or o1-preview) |
+| `-p, --provider` | LLM provider to use (openai or anthropic) |
+| `-m, --model` | LLM model to use (OpenAI: o3-mini, o1-preview, gpt-4o; Anthropic: claude-3-7-sonnet-20250219, claude-3-7-sonnet-latest, claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022) |
 | `-o, --output` | Output directory for results |
 | `-i, --max-iterations` | Maximum iterations per plan of attack |
 
@@ -75,11 +89,12 @@ python run.py -u https://example.com -e -s -m o3-mini -i 10
 Rogue is built with a modular architecture consisting of several key components:
 
 - **Agent**: Orchestrates the scanning process and manages other components
-- **Planner**: Generates intelligent testing strategies using LLMs
+- **Planner**: Generates intelligent testing strategies using LLMs with support for multiple providers (OpenAI and Anthropic)
 - **Scanner**: Handles web page interaction and data collection
 - **Proxy**: Monitors and captures network traffic
 - **Reporter**: Analyzes findings and generates detailed reports
 - **Tools**: Collection of testing and exploitation tools
+- **LLM Providers**: Supports both OpenAI and Anthropic Claude models with provider-specific optimizations
 
 ## 📊 Example Report
 
@@ -100,7 +115,7 @@ Reports are generated in both text and markdown formats, containing:
 
 ## 📋 TODOs
 
-- [ ] Add support for Anthropic Claude models
+- [x] Add support for Anthropic Claude models
 - [ ] Integrate vision API capabilities for visual analysis
 - [ ] Run against HackerOne reports to find first LLM-powered vulnerability in the wild
 - [ ] Implement more sophisticated planning algorithms
